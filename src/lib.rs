@@ -1,4 +1,4 @@
-mod cookies;
+pub mod cookies;
 
 use std::collections::HashMap;
 
