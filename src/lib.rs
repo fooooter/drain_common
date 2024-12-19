@@ -1,3 +1,6 @@
+mod cookies;
+mod sessions;
+
 use std::collections::HashMap;
 
 pub enum RequestData<'a> {
