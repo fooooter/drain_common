@@ -7,15 +7,15 @@ pub enum SameSite {
 }
 
 pub struct SetCookie {
-    value: String,
-    domain: Option<String>,
-    expires: Option<String>,
-    httponly: Option<bool>,
-    max_age: Option<u32>,
-    partitioned: Option<bool>,
-    path: Option<String>,
-    samesite: Option<SameSite>,
-    secure: Option<bool>
+    pub value: String,
+    pub domain: Option<String>,
+    pub expires: Option<String>,
+    pub httponly: bool,
+    pub max_age: Option<u32>,
+    pub partitioned: bool,
+    pub path: Option<String>,
+    pub samesite: Option<SameSite>,
+    pub secure: bool
 }
 
 pub fn cookies(headers: &HashMap<String, String>) -> Option<HashMap<String, String>> {
