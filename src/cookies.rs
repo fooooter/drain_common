@@ -11,7 +11,7 @@ pub struct SetCookie {
     pub domain: Option<String>,
     pub expires: Option<String>,
     pub httponly: bool,
-    pub max_age: Option<u32>,
+    pub max_age: Option<i32>,
     pub partitioned: bool,
     pub path: Option<String>,
     pub samesite: Option<SameSite>,
