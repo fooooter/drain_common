@@ -10,6 +10,7 @@ pub enum RequestData<'a> {
 
 pub struct FormDataValue {
     pub filename: Option<String>,
+    pub headers: HashMap<String, String>,
     pub value: Vec<u8>
 }
 
