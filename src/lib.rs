@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 pub enum RequestData<'a> {
     Get(&'a Option<HashMap<String, String>>),
-    Post(&'a Option<RequestBody>),
-    Head
+    Post {params: &'a Option<HashMap<String, String>>, data: &'a Option<RequestBody>},
+    Head(&'a Option<HashMap<String, String>>),
 }
 
 pub struct FormDataValue {
