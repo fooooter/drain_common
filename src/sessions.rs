@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 use openssl::base64;
 use openssl::rand::rand_priv_bytes;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, OwnedMutexGuard};
 use crate::cookies::SameSite::Strict;
 use crate::cookies::{cookies, SetCookie};
 
@@ -11,22 +11,23 @@ pub trait SessionValue: Send {
     fn as_any(&self) -> &dyn Any;
 }
 
-static SESSIONS: LazyLock<Mutex<HashMap<String, Arc<Mutex<HashMap<String, Box<dyn SessionValue>>>>>>> = LazyLock::new(|| {
-    Mutex::new(HashMap::new())
+static SESSIONS: LazyLock<Arc<Mutex<HashMap<String, Arc<Mutex<HashMap<String, Box<dyn SessionValue>>>>>>>> = LazyLock::new(|| {
+    Arc::new(Mutex::new(HashMap::new()))
 });
 
 pub struct Session {
     session_key: String,
-    session_data: Arc<Mutex<HashMap<String, Box<dyn SessionValue>>>>
+    session_data: Arc<Mutex<HashMap<String, Box<dyn SessionValue>>>>,
+    sessions_ref: OwnedMutexGuard<HashMap<String, Arc<Mutex<HashMap<String, Box<dyn SessionValue>>>>>>
 }
 
 impl Session {
     pub async fn new(session_key: Option<String>, set_cookie: &mut HashMap<String, SetCookie>) -> Self {
-        let mut sessions = SESSIONS.lock().await;
+        let mut sessions = SESSIONS.clone().lock_owned().await;
 
         if let Some(session_key) = session_key {
             if let Some(session_data) = sessions.get(&session_key) {
-                return Self { session_key, session_data: session_data.clone() };
+                return Self { session_key, session_data: session_data.clone(), sessions_ref: sessions };
             }
         }
 
@@ -35,12 +36,12 @@ impl Session {
 
         let session_key = base64::encode_block(&session_id_bytes);
 
-        sessions.insert(session_key.clone(), Arc::new(Mutex::new(HashMap::new())));
+        sessions.insert(session_key.to_owned(), Arc::new(Mutex::new(HashMap::new())));
 
         let session_data = sessions.get(&session_key).unwrap().clone();
 
         set_cookie.insert(String::from("SESSION_ID"), SetCookie {
-            value: session_key.clone(),
+            value: session_key.to_owned(),
             domain: None,
             expires: None,
             httponly: true,
@@ -51,7 +52,7 @@ impl Session {
             secure: false
         });
 
-        Self { session_key, session_data }
+        Self { session_key, session_data, sessions_ref: sessions }
     }
 
     pub async fn set(&mut self, k: String, v: Box<dyn SessionValue>) {
@@ -71,8 +72,8 @@ impl Session {
         &self.session_key
     }
 
-    pub async fn destroy(self) {
-        SESSIONS.lock().await.remove(&self.session_key);
+    pub async fn destroy(mut self) {
+        self.sessions_ref.remove(&self.session_key);
     }
 }
 
