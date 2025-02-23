@@ -59,7 +59,7 @@ impl Session {
         self.session_data.lock().await.insert(k, v);
     }
 
-    pub async fn get<'a, V: SessionValue + Clone + 'static>(&'a self, k: &'a String) -> Option<V> {
+    pub async fn get<'a, V: SessionValue + Clone + 'static>(&'a self, k: &String) -> Option<V> {
         if let Some(session_value) = self.session_data.lock().await.get(k) {
             if let Some(session_value_extracted) = session_value.as_any().downcast_ref::<V>() {
                 return Some(session_value_extracted.clone())
