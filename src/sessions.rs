@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
+use std::time::{SystemTime, UNIX_EPOCH};
 use openssl::base64;
 use openssl::rand::rand_priv_bytes;
 use tokio::sync::Mutex;
@@ -32,7 +33,13 @@ impl Session {
         let mut session_id_bytes: [u8; 16] = [0; 16];
         rand_priv_bytes(&mut session_id_bytes).unwrap();
 
-        let session_key = base64::encode_block(&session_id_bytes);
+        let creation_time: [u8; size_of::<u64>()] = SystemTime::now().duration_since(SystemTime::from(UNIX_EPOCH)).unwrap().as_secs().to_be_bytes();
+
+        let mut session_key_bytes: Vec<u8> = Vec::new();
+        session_key_bytes.append(&mut creation_time.to_vec());
+        session_key_bytes.append(&mut session_id_bytes.to_vec());
+
+        let session_key = base64::encode_block(&*session_key_bytes);
 
         let mut sessions = SESSIONS.lock().await;
         sessions.insert(session_key.to_owned(), Arc::new(Mutex::new(HashMap::new())));
@@ -77,6 +84,16 @@ impl Session {
 }
 
 pub async fn start_session(request_headers: &HashMap<String, String>, set_cookie: &mut HashMap<String, SetCookie>) -> Session {
+    SESSIONS.lock().await
+        .retain(|k, _| {
+            let session_key_decoded = &*base64::decode_block(&*k).unwrap();
+            let (creation_time, _) = session_key_decoded.split_at(size_of::<u64>());
+            if SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() - u64::from_be_bytes(creation_time.try_into().unwrap()) > 3600 {
+                return false
+            }
+            true
+        });
+
     if let Some(cookies) = cookies(request_headers) {
         if let Some(session_key) = cookies.get("SESSION_ID") {
             return Session::new(Some(session_key.clone()), set_cookie).await;
