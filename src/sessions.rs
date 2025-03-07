@@ -5,6 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use openssl::base64;
 use openssl::rand::rand_priv_bytes;
 use tokio::sync::Mutex;
+use tokio::task;
 use crate::cookies::SameSite::Strict;
 use crate::cookies::{cookies, SetCookie};
 
@@ -84,15 +85,17 @@ impl Session {
 }
 
 pub async fn start_session(request_headers: &HashMap<String, String>, set_cookie: &mut HashMap<String, SetCookie>) -> Session {
-    SESSIONS.lock().await
-        .retain(|k, _| {
-            let session_key_decoded = &*base64::decode_block(&*k).unwrap();
-            let (creation_time, _) = session_key_decoded.split_at(size_of::<u64>());
-            if SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() - u64::from_be_bytes(creation_time.try_into().unwrap()) > 3600 {
-                return false
-            }
-            true
-        });
+    task::spawn(async move {
+        SESSIONS.lock().await
+            .retain(|k, _| {
+                let session_key_decoded = &*base64::decode_block(&*k).unwrap();
+                let (creation_time, _) = session_key_decoded.split_at(size_of::<u64>());
+                if SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() - u64::from_be_bytes(creation_time.try_into().unwrap()) > 3600 {
+                    return false
+                }
+                true
+            });
+    });
 
     if let Some(cookies) = cookies(request_headers) {
         if let Some(session_key) = cookies.get("SESSION_ID") {
