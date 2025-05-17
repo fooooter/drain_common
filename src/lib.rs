@@ -7,6 +7,9 @@ pub enum RequestData<'a> {
     Get(&'a Option<HashMap<String, String>>),
     Post {params: &'a Option<HashMap<String, String>>, data: &'a Option<RequestBody>},
     Head(&'a Option<HashMap<String, String>>),
+    Put {params: &'a Option<HashMap<String, String>>, data: &'a Option<RequestBody>},
+    Delete {params: &'a Option<HashMap<String, String>>, data: &'a Option<RequestBody>},
+    Patch {params: &'a Option<HashMap<String, String>>, data: &'a Option<RequestBody>}
 }
 
 pub struct FormDataValue {
@@ -17,5 +20,7 @@ pub struct FormDataValue {
 
 pub enum RequestBody {
     XWWWFormUrlEncoded(HashMap<String, String>),
-    FormData(HashMap<String, FormDataValue>)
+    FormData(HashMap<String, FormDataValue>),
+    Plain(String),
+    OctetStream(Vec<u8>)
 }
