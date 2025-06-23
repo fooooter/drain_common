@@ -9,7 +9,8 @@ pub enum RequestData<'a> {
     Head(&'a Option<HashMap<String, String>>),
     Put {params: &'a Option<HashMap<String, String>>, data: &'a Option<RequestBody>},
     Delete {params: &'a Option<HashMap<String, String>>, data: &'a Option<RequestBody>},
-    Patch {params: &'a Option<HashMap<String, String>>, data: &'a Option<RequestBody>}
+    Patch {params: &'a Option<HashMap<String, String>>, data: &'a Option<RequestBody>},
+    Default
 }
 
 pub struct FormDataValue {
